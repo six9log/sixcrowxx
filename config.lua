@@ -1,12 +1,10 @@
 -- ========================================================================
--- ⚡ SIXCROW CONFIG | ROTEADOR INTELIGENTE
+-- ⚡ SIXCROW CONFIG | ROTEADOR INTELIGENTE & DEBUGGER
 -- ========================================================================
 local GitHubUser = "six9log" 
 local RepoName = "sixcrowxx"
 
--- Lê a mochila global do executor e tenta pegar o ID
 local PlaceId = getgenv().SixCrow_ForcedID or game.PlaceId
-
 print("⚡ SixCrow Config: Procurando script para o ID: " .. tostring(PlaceId))
 
 local JogosSuportados = {
@@ -15,23 +13,35 @@ local JogosSuportados = {
     [114234929420007] = "bloxstrike.lua"
 }
 
-local ArquivoParaCarregar = JogosSuportados[PlaceId]
+local ArquivoParaCarregar = JogosSuportados[PlaceId] or "master_menu.lua"
 
-if ArquivoParaCarregar then
-    print("🚀 Script exclusivo encontrado: " .. ArquivoParaCarregar)
-else
+if ArquivoParaCarregar == "master_menu.lua" then
     print("⚠️ Jogo não mapeado. Carregando Menu Universal...")
-    ArquivoParaCarregar = "master_menu.lua"
+else
+    print("🚀 Script exclusivo encontrado: " .. ArquivoParaCarregar)
 end
 
 local ModuloURL = "https://raw.githubusercontent.com/" .. GitHubUser .. "/" .. RepoName .. "/main/modulos/" .. ArquivoParaCarregar .. "?t=" .. tostring(tick())
 
+-- ========================================================================
+-- SISTEMA PROFISSIONAL DE DEPURAÇÃO (DEBUG)
+-- ========================================================================
 local success, err = pcall(function()
-    loadstring(game:HttpGet(ModuloURL))()
+    local respostaGitHub = game:HttpGet(ModuloURL)
+    local funcaoDoCodigo, erroDeCompilacao = loadstring(respostaGitHub)
+    
+    if funcaoDoCodigo then
+        funcaoDoCodigo() -- Executa o script se estiver tudo certo
+    else
+        -- Se falhar, ele vai nos contar EXATAMENTE o porquê:
+        warn("❌ Erro crítico ao converter o arquivo " .. ArquivoParaCarregar .. " em código!")
+        warn("Motivo do erro: " .. tostring(erroDeCompilacao))
+        warn("Conteúdo que o GitHub enviou de volta: " .. tostring(respostaGitHub))
+    end
 end)
 
 if not success then
-    warn("SixCrow: Erro ao tentar abrir " .. ArquivoParaCarregar .. ": " .. tostring(err))
+    warn("SixCrow: Falha total na conexão: " .. tostring(err))
 end
 
 -- Limpa a variável para o próximo uso
