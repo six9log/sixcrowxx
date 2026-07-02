@@ -107,14 +107,13 @@ local function LoadMainCheat()
     SubmitBtn.Text = "CARREGANDO..."
     SubmitBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     
-    -- Lógica de guardar o ID na variável Global _G
-    -- Se ele digitou algo, converte para número. Se estiver vazio, usa o jogo atual.
+    -- Usando getgenv() para garantir que qualquer executor entenda
     local TypedID = tonumber(GameIdInput.Text)
     if TypedID then
-        _G.SixCrow_ForcedID = TypedID
+        getgenv().SixCrow_ForcedID = TypedID
         print("⚡ SixCrow: ID Manual detectado ->", TypedID)
     else
-        _G.SixCrow_ForcedID = game.PlaceId
+        getgenv().SixCrow_ForcedID = game.PlaceId
         print("⚡ SixCrow: ID Automático ativado ->", game.PlaceId)
     end
     
