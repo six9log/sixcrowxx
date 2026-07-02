@@ -125,7 +125,9 @@ local function LoadMainCheat()
     ScreenGui:Destroy()
     Blur:Destroy()
     
-    local ConfigURL = "https://raw.githubusercontent.com/" .. GitHubUser .. "/" .. RepoName .. "/main/config.lua"
+-- O "?t=" .. tostring(tick()) engana o executor e força ele a baixar a versão atualizada AGORA
+    local ConfigURL = "https://raw.githubusercontent.com/" .. GitHubUser .. "/" .. RepoName .. "/main/config.lua?t=" .. tostring(tick())
+    
     local success, err = pcall(function() loadstring(game:HttpGet(ConfigURL))() end)
     
     if not success then warn("SixCrow: Erro ao carregar Config: " .. tostring(err)) end

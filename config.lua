@@ -24,7 +24,7 @@ else
     ArquivoParaCarregar = "master_menu.lua"
 end
 
-local ModuloURL = "https://raw.githubusercontent.com/" .. GitHubUser .. "/" .. RepoName .. "/main/modulos/" .. ArquivoParaCarregar
+local ModuloURL = "https://raw.githubusercontent.com/" .. GitHubUser .. "/" .. RepoName .. "/main/modulos/" .. ArquivoParaCarregar .. "?t=" .. tostring(tick())
 
 local success, err = pcall(function()
     loadstring(game:HttpGet(ModuloURL))()
