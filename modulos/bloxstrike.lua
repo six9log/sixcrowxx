@@ -30,6 +30,9 @@ local Config = {
     ESP_Distance = false,
     BoxColor = Color3.fromRGB(255, 255, 255),
 
+    -- Apelação [NOVO]
+    NoClip = false,
+
     -- Sistema
     MenuKeybind = Enum.KeyCode.Insert,
     ShowMobileButton = true, 
@@ -98,6 +101,7 @@ StealthGUI.Parent = SafeGUI_Parent
 -- ========================================================================
 -- INTERFACE GRÁFICA (UI ROBUSTA E BELEZA)
 -- ========================================================================
+
 -- BOTÃO MOBILE
 local MobileBtn = Instance.new("TextButton", StealthGUI)
 MobileBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -195,15 +199,17 @@ ContentContainer.BackgroundTransparency = 1
 
 local Tabs, CurrentTab = {}, nil
 
+-- ========================================================================
 -- FUNÇÕES DE CRIAÇÃO UI
+-- ========================================================================
 local function CreateTab(name, layoutOrder)
     local TabBtn = Instance.new("TextButton", TabBar)
-    TabBtn.Size = UDim2.new(1/3, 0, 1, 0)
+    TabBtn.Size = UDim2.new(1/4, 0, 1, 0) -- Ajustado para caber 4 abas perfeitamente
     TabBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     TabBtn.Text = name
     TabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     TabBtn.Font = Enum.Font.GothamBold
-    TabBtn.TextSize = 12
+    TabBtn.TextSize = 11
     TabBtn.LayoutOrder = layoutOrder
 
     local ScrollFrame = Instance.new("ScrollingFrame", ContentContainer)
@@ -320,8 +326,7 @@ local function CreateSlider(parent, name, key, min, max, isFloat)
         Fill.Size = UDim2.new(pos, 0, 1, 0)
         Config[key] = val
         Txt.Text = name .. ": " .. tostring(val)
-    end
-
+    end  
     BG.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = true Update(i) end end)
     UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = false end end)
     UIS.InputChanged:Connect(function(i) if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then Update(i) end end)
@@ -332,7 +337,8 @@ end
 -- ========================================================================
 local TabC = CreateTab("⚔️ AIMBOT", 1)
 local TabV = CreateTab("👁️ VISUAIS", 2)
-local TabS = CreateTab("⚙️ CONFIG", 3)
+local TabA = CreateTab("🔥 APELAÇÃO", 3) -- [NOVA ABA ADICIONADA]
+local TabS = CreateTab("⚙️ CONFIG", 4)
 
 Tabs[1].Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 Tabs[1].Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
@@ -373,7 +379,13 @@ end)
 CreateToggle(TabV, "Caixa de Seleção (Box)", "ESP_Box")
 CreateToggle(TabV, "Mostrar Distância", "ESP_Distance")
 
--- ================== ABA 3: CONFIG ==================
+-- ================== ABA 3: APELAÇÃO [NOVO] ==================
+CreateSubCategory(TabA, "MODOS ROUBADOS")
+CreateToggle(TabA, "Ativar No-Clip (Atravessar Paredes)", "NoClip", function(s)
+    Notify("No-Clip", s and "Você agora é um fantasma!" or "Física Restaurada.")
+end)
+
+-- ================== ABA 4: CONFIG ==================
 CreateSubCategory(TabS, "MENU E TECLAS")
 local BindBtn = CreateButton(TabS, "Ocultar Menu: " .. Config.MenuKeybind.Name, function()
     IsBindingMenu = true
@@ -402,11 +414,9 @@ UIS.InputEnded:Connect(function(input)
         LockedTarget = nil 
     end
 end)
-
 CreateToggle(TabS, "Botão Flutuante (Mobile)", "ShowMobileButton", function(s) MobileBtn.Visible = s end)
 CreateSubCategory(TabS, "DADOS")
 CreateButton(TabS, "💾 SALVAR TODAS CONFIGURAÇÕES", SaveConfig, Color3.fromRGB(50, 150, 50))
-
 
 -- ========================================================================
 -- SISTEMA DINÂMICO DE ENTIDADES (ESP INFINITO)
@@ -442,6 +452,11 @@ end
 local function Validate(part, char)
     if not part or not char then return false end
     if not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart") then return false end
+    
+    -- [NOVO: TRAVA DE SEGURANÇA] Impede de mirar em cadáveres ou mortos
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return false end
+
     local dist = (part.Position - LP.Character.HumanoidRootPart.Position).Magnitude
     if dist > Config.MaxDistance then return false end
     
@@ -579,4 +594,19 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
-Notify("GGPVP PREDATOR", "Aimbot Otimizado! Interface V8 Carregada.")
+-- ========================================================================
+-- LÓGICA DO NO-CLIP (Atravessar Paredes) [NOVO]
+-- ========================================================================
+-- Rodando no "Stepped" ele desativa as colisões exatamente um milissegundo 
+-- antes do Roblox calcular a física, deixando liso em qualquer celular.
+RunService.Stepped:Connect(function()
+    if Config.NoClip and LP.Character then
+        for _, part in pairs(LP.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+Notify("GGPVP PREDATOR", "Aimbot Otimizado + NO-CLIP ATIVO! Interface V8 Carregada.")
