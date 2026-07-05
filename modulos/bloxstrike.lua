@@ -1,22 +1,21 @@
--- [[ SIXCROW V9.0 | BLOXSTRIKE PREDATOR ]]
--- Motor Robusto, ESP Skeleton, Tracers e UI Premium (PC/Mobile)
+-- [[ SIXCROW V9.5 | BLOXSTRIKE PRO ]]
+-- Clean UI, Color Pickers RGB e Aimbot Clássico
 -- Otimizado para POCO M7 / Codex / Delta
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local Config = {
-    -- Combate
+    -- Combate (Lógica Clássica)
     Aimbot = false,
     AimMethod = "Mobile", 
     TargetPart = "Head",
-    AimMode = "Ao Atirar/Clicar", -- "Sempre Grudado" ou "Ao Atirar/Clicar"
+    RequireAiming = false, -- Volta do clássico: Só atira quando clica/toca
     Prediction = true, 
     BulletSpeed = 2500,
     
     -- Filtros e FOV
     ShowFov = false,
     Fov = 150,
-    FovColorName = "Verde",
     FovColor = Color3.fromRGB(0, 255, 100),
     FovRainbow = false,
     Smoothness = 0.5, 
@@ -30,7 +29,6 @@ local Config = {
     ESP_Skeleton = false,
     ESP_Tracer = false,
     ESP_Distance = false,
-    ESPColorName = "Verde",
     ESPColor = Color3.fromRGB(0, 255, 100),
     ESPRainbow = false,
 
@@ -41,32 +39,9 @@ local Config = {
     -- Sistema
     MenuKeybind = Enum.KeyCode.Insert,
     ShowMobileButton = true, 
-    MenuColorName = "Verde",
-    MenuColor = Color3.fromRGB(0, 255, 100), -- Verde Hacker
-    SaveFileName = "SixCrow_BloxStrike_V9.json"
+    MenuColor = Color3.fromRGB(0, 255, 100),
+    SaveFileName = "SixCrow_BloxStrike_V95.json"
 }
-
--- Lista de Cores Base
-local ColorsList = {
-    {"Verde", Color3.fromRGB(0, 255, 100)},
-    {"Vermelho", Color3.fromRGB(255, 50, 50)},
-    {"Azul", Color3.fromRGB(50, 150, 255)},
-    {"Branco", Color3.fromRGB(255, 255, 255)},
-    {"Amarelo", Color3.fromRGB(255, 255, 50)},
-    {"Rosa", Color3.fromRGB(255, 50, 200)},
-    {"Ciano", Color3.fromRGB(50, 255, 255)}
-}
-
-local function GetNextColor(currentName)
-    for i, v in ipairs(ColorsList) do
-        if v[1] == currentName then
-            local nextIdx = i + 1
-            if nextIdx > #ColorsList then nextIdx = 1 end
-            return ColorsList[nextIdx][1], ColorsList[nextIdx][2]
-        end
-    end
-    return ColorsList[1][1], ColorsList[1][2]
-end
 
 -- ========================================================================
 -- SERVIÇOS CORE E GERENCIAMENTO DE TEMA
@@ -81,24 +56,25 @@ local CoreGui = game:GetService("CoreGui")
 
 local LockedTarget, IsAiming, IsBindingMenu = nil, false, false
 local ActiveEntities, Highlights, Drawings = {}, {}, {}
-local ThemeElements = {} -- Guarda todos os elementos que mudam de cor com o menu
+local ThemeElements = {} 
 
-local function AddThemeElement(instance, prop)
-    table.insert(ThemeElements, {obj = instance, prop = prop})
+local function AddThemeElement(instance, prop, conditional)
+    table.insert(ThemeElements, {obj = instance, prop = prop, cond = conditional})
 end
 
 local function UpdateMenuColor(newColor)
     Config.MenuColor = newColor
     for _, item in pairs(ThemeElements) do
-        if item.obj and item.obj.Parent then item.obj[item.prop] = newColor end
+        if item.obj and item.obj.Parent then 
+            if not item.cond or item.cond() then
+                item.obj[item.prop] = newColor 
+            end
+        end
     end
 end
 
 local function RandomName() return HttpService:GenerateGUID(false):gsub("-", "") end
-
-local function Notify(title, text)
-    pcall(function() game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 4}) end)
-end
+local function Notify(title, text) pcall(function() game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 4}) end) end
 
 local SafeGUI_Parent
 pcall(function() SafeGUI_Parent = (gethui and gethui()) or CoreGui end)
@@ -111,12 +87,12 @@ StealthGUI.IgnoreGuiInset = true
 StealthGUI.Parent = SafeGUI_Parent
 
 -- ========================================================================
--- INTERFACE GRÁFICA (UI ROBUSTA E CORRIGIDA)
+-- INTERFACE GRÁFICA (CLEAN & PROFISSIONAL)
 -- ========================================================================
 local MobileBtn = Instance.new("TextButton", StealthGUI)
 MobileBtn.Size, MobileBtn.Position = UDim2.new(0, 50, 0, 50), UDim2.new(0, 15, 0, 15)
 MobileBtn.BackgroundColor3, MobileBtn.Text = Color3.fromRGB(20, 20, 20), "SC"
-MobileBtn.TextColor3, MobileBtn.Font, MobileBtn.TextSize = Config.MenuColor, Enum.Font.GothamBold, 22
+MobileBtn.TextColor3, MobileBtn.Font, MobileBtn.TextSize = Config.MenuColor, Enum.Font.GothamBold, 20
 MobileBtn.Visible, MobileBtn.Active, MobileBtn.Draggable = Config.ShowMobileButton, true, true 
 Instance.new("UICorner", MobileBtn).CornerRadius = UDim.new(1, 0)
 local mBtnStroke = Instance.new("UIStroke", MobileBtn)
@@ -133,22 +109,22 @@ local fovStroke = Instance.new("UIStroke", FOVFrame)
 fovStroke.Color, fovStroke.Thickness, fovStroke.Transparency = Config.FovColor, 1.2, 0.5
 
 local MainFrame = Instance.new("Frame", StealthGUI)
-MainFrame.Size, MainFrame.Position = UDim2.new(0, 350, 0, 480), UDim2.new(0.5, -175, 0.5, -240)
-MainFrame.BackgroundColor3, MainFrame.BorderSizePixel, MainFrame.Active = Color3.fromRGB(15, 15, 15), 0, true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(50, 50, 50)
+MainFrame.Size, MainFrame.Position = UDim2.new(0, 360, 0, 480), UDim2.new(0.5, -180, 0.5, -240)
+MainFrame.BackgroundColor3, MainFrame.BorderSizePixel, MainFrame.Active = Color3.fromRGB(18, 18, 18), 0, true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(40, 40, 40)
 
 MobileBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
 local TitleBar = Instance.new("Frame", MainFrame)
-TitleBar.Size, TitleBar.BackgroundColor3 = UDim2.new(1, 0, 0, 45), Color3.fromRGB(25, 25, 25)
-Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 8)
+TitleBar.Size, TitleBar.BackgroundColor3 = UDim2.new(1, 0, 0, 40), Color3.fromRGB(22, 22, 22)
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 6)
 local fix = Instance.new("Frame", TitleBar)
-fix.Size, fix.Position, fix.BackgroundColor3, fix.BorderSizePixel = UDim2.new(1, 0, 0, 8), UDim2.new(0, 0, 1, -8), Color3.fromRGB(25, 25, 25), 0
+fix.Size, fix.Position, fix.BackgroundColor3, fix.BorderSizePixel = UDim2.new(1, 0, 0, 6), UDim2.new(0, 0, 1, -6), Color3.fromRGB(22, 22, 22), 0
 
 local Title = Instance.new("TextLabel", TitleBar)
 Title.Size, Title.Position, Title.BackgroundTransparency = UDim2.new(1, -20, 1, 0), UDim2.new(0, 15, 0, 0), 1
-Title.Text, Title.TextColor3, Title.Font, Title.TextSize = "SIXCROW | BLOXSTRIKE PREDATOR", Config.MenuColor, Enum.Font.GothamBlack, 14
+Title.Text, Title.TextColor3, Title.Font, Title.TextSize = "SIXCROW | BLOXSTRIKE", Config.MenuColor, Enum.Font.GothamBold, 13
 Title.TextXAlignment = Enum.TextXAlignment.Left
 AddThemeElement(Title, "TextColor3")
 
@@ -169,41 +145,39 @@ TitleBar.InputEnded:Connect(function(input)
 end)
 
 local TabBar = Instance.new("Frame", MainFrame)
-TabBar.Size, TabBar.Position, TabBar.BackgroundColor3 = UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, 0, 45), Color3.fromRGB(20, 20, 20)
+TabBar.Size, TabBar.Position, TabBar.BackgroundColor3 = UDim2.new(1, 0, 0, 35), UDim2.new(0, 0, 0, 40), Color3.fromRGB(15, 15, 15)
 local TabListLayout = Instance.new("UIListLayout", TabBar)
 TabListLayout.FillDirection, TabListLayout.SortOrder = Enum.FillDirection.Horizontal, Enum.SortOrder.LayoutOrder
 
 local ContentContainer = Instance.new("Frame", MainFrame)
-ContentContainer.Size, ContentContainer.Position, ContentContainer.BackgroundTransparency = UDim2.new(1, 0, 1, -85), UDim2.new(0, 0, 0, 85), 1
+ContentContainer.Size, ContentContainer.Position, ContentContainer.BackgroundTransparency = UDim2.new(1, 0, 1, -75), UDim2.new(0, 0, 0, 75), 1
 
 local Tabs, CurrentTab = {}, nil
 
 -- ========================================================================
--- SISTEMA DE CRIAÇÃO UI COM CORREÇÃO DE LAYOUT (TÓPICOS PERFEITOS)
+-- COMPONENTES DA UI (Com visual Flat/Limpo)
 -- ========================================================================
 local function CreateTab(name, layoutOrder)
     local TabBtn = Instance.new("TextButton", TabBar)
-    TabBtn.Size, TabBtn.BackgroundColor3, TabBtn.Text = UDim2.new(1/4, 0, 1, 0), Color3.fromRGB(20, 20, 20), name
-    TabBtn.TextColor3, TabBtn.Font, TabBtn.TextSize, TabBtn.LayoutOrder = Color3.fromRGB(150, 150, 150), Enum.Font.GothamBold, 11, layoutOrder
+    TabBtn.Size, TabBtn.BackgroundColor3, TabBtn.Text = UDim2.new(1/4, 0, 1, 0), Color3.fromRGB(15, 15, 15), name
+    TabBtn.TextColor3, TabBtn.Font, TabBtn.TextSize, TabBtn.LayoutOrder = Color3.fromRGB(130, 130, 130), Enum.Font.GothamSemibold, 11, layoutOrder
 
     local ScrollFrame = Instance.new("ScrollingFrame", ContentContainer)
-    ScrollFrame.Size, ScrollFrame.BackgroundTransparency, ScrollFrame.ScrollBarThickness = UDim2.new(1, 0, 1, 0), 1, 4
+    ScrollFrame.Size, ScrollFrame.BackgroundTransparency, ScrollFrame.ScrollBarThickness = UDim2.new(1, 0, 1, 0), 1, 3
     ScrollFrame.ScrollBarImageColor3, ScrollFrame.CanvasSize = Config.MenuColor, UDim2.new(0, 0, 0, 0)
     ScrollFrame.AutomaticCanvasSize, ScrollFrame.Visible = Enum.AutomaticSize.Y, false
     AddThemeElement(ScrollFrame, "ScrollBarImageColor3")
 
     local uiList = Instance.new("UIListLayout", ScrollFrame)
-    uiList.Padding, uiList.HorizontalAlignment = UDim.new(0, 8), Enum.HorizontalAlignment.Center
-    uiList.SortOrder = Enum.SortOrder.LayoutOrder -- A TRAVA MÁGICA QUE ARRUMA OS TÓPICOS!
-    
+    uiList.Padding, uiList.HorizontalAlignment, uiList.SortOrder = UDim.new(0, 6), Enum.HorizontalAlignment.Center, Enum.SortOrder.LayoutOrder
     Instance.new("UIPadding", ScrollFrame).PaddingTop = UDim.new(0, 10)
     Instance.new("UIPadding", ScrollFrame).PaddingBottom = UDim.new(0, 15)
 
     TabBtn.MouseButton1Click:Connect(function()
         if CurrentTab then
-            CurrentTab.Btn.TextColor3, CurrentTab.Btn.BackgroundColor3, CurrentTab.Scroll.Visible = Color3.fromRGB(150, 150, 150), Color3.fromRGB(20, 20, 20), false
+            CurrentTab.Btn.TextColor3, CurrentTab.Btn.BackgroundColor3, CurrentTab.Scroll.Visible = Color3.fromRGB(130, 130, 130), Color3.fromRGB(15, 15, 15), false
         end
-        TabBtn.TextColor3, TabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255), Color3.fromRGB(35, 35, 35)
+        TabBtn.TextColor3, TabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255), Color3.fromRGB(25, 25, 25)
         ScrollFrame.Visible, CurrentTab = true, {Btn = TabBtn, Scroll = ScrollFrame}
     end)
     table.insert(Tabs, {Btn = TabBtn, Scroll = ScrollFrame})
@@ -212,33 +186,30 @@ end
 
 local function CreateSubCategory(parent, text)
     local Lbl = Instance.new("TextLabel", parent)
-    Lbl.Size, Lbl.BackgroundTransparency, Lbl.Text = UDim2.new(0.9, 0, 0, 25), 1, "■ " .. text
-    Lbl.TextColor3, Lbl.Font, Lbl.TextSize = Config.MenuColor, Enum.Font.GothamBlack, 13
+    Lbl.Size, Lbl.BackgroundTransparency, Lbl.Text = UDim2.new(0.9, 0, 0, 20), 1, text
+    Lbl.TextColor3, Lbl.Font, Lbl.TextSize = Color3.fromRGB(180, 180, 180), Enum.Font.GothamSemibold, 11
     Lbl.TextXAlignment, Lbl.LayoutOrder = Enum.TextXAlignment.Left, #parent:GetChildren()
-    AddThemeElement(Lbl, "TextColor3")
 end
 
 local function CreateToggle(parent, name, key, cb)
     local Btn = Instance.new("TextButton", parent)
-    Btn.Size, Btn.BackgroundColor3, Btn.Text = UDim2.new(0.9, 0, 0, 38), Color3.fromRGB(30, 30, 30), "  " .. name
+    Btn.Size, Btn.BackgroundColor3, Btn.Text = UDim2.new(0.9, 0, 0, 34), Color3.fromRGB(24, 24, 24), "   " .. name
     Btn.TextColor3 = Config[key] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
-    Btn.Font, Btn.TextSize, Btn.TextXAlignment, Btn.LayoutOrder = Enum.Font.GothamSemibold, 13, Enum.TextXAlignment.Left, #parent:GetChildren()
-    
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    Btn.Font, Btn.TextSize, Btn.TextXAlignment, Btn.LayoutOrder = Enum.Font.Gotham, 12, Enum.TextXAlignment.Left, #parent:GetChildren()
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
     local btnStroke = Instance.new("UIStroke", Btn)
-    btnStroke.Color = Config[key] and Config.MenuColor or Color3.fromRGB(50, 50, 50)
+    btnStroke.Color = Config[key] and Config.MenuColor or Color3.fromRGB(45, 45, 45)
 
     local Status = Instance.new("TextLabel", Btn)
-    Status.Size, Status.Position, Status.BackgroundTransparency = UDim2.new(0, 50, 1, 0), UDim2.new(1, -55, 0, 0), 1
-    Status.Text, Status.Font, Status.TextSize = Config[key] and "ON" or "OFF", Enum.Font.GothamBold, 13
-    Status.TextColor3 = Config[key] and Config.MenuColor or Color3.fromRGB(255, 50, 50)
+    Status.Size, Status.Position, Status.BackgroundTransparency = UDim2.new(0, 40, 1, 0), UDim2.new(1, -45, 0, 0), 1
+    Status.Text, Status.Font, Status.TextSize = Config[key] and "ON" or "OFF", Enum.Font.GothamBold, 11
+    Status.TextColor3 = Config[key] and Config.MenuColor or Color3.fromRGB(100, 100, 100)
 
-    -- Atualiza cores dinamicamente se o tema mudar enquanto o toggle está ON
     local function UpdateVisuals()
         Btn.TextColor3 = Config[key] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
-        btnStroke.Color = Config[key] and Config.MenuColor or Color3.fromRGB(50, 50, 50)
+        btnStroke.Color = Config[key] and Config.MenuColor or Color3.fromRGB(45, 45, 45)
         Status.Text = Config[key] and "ON" or "OFF"
-        Status.TextColor3 = Config[key] and Config.MenuColor or Color3.fromRGB(255, 50, 50)
+        Status.TextColor3 = Config[key] and Config.MenuColor or Color3.fromRGB(100, 100, 100)
     end
 
     Btn.MouseButton1Click:Connect(function()
@@ -247,33 +218,32 @@ local function CreateToggle(parent, name, key, cb)
         if cb then cb(Config[key]) end
     end)
     
-    -- Tag para o tema dinâmico
-    table.insert(ThemeElements, {obj = Status, prop = "TextColor3", conditional = function() return Config[key] end})
-    table.insert(ThemeElements, {obj = btnStroke, prop = "Color", conditional = function() return Config[key] end})
+    AddThemeElement(Status, "TextColor3", function() return Config[key] end)
+    AddThemeElement(btnStroke, "Color", function() return Config[key] end)
 end
 
 local function CreateButton(parent, text, cb, color)
     local Btn = Instance.new("TextButton", parent)
-    Btn.Size, Btn.BackgroundColor3, Btn.Text = UDim2.new(0.9, 0, 0, 38), color or Color3.fromRGB(40, 40, 40), text
-    Btn.TextColor3, Btn.Font, Btn.TextSize, Btn.LayoutOrder = Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold, 13, #parent:GetChildren()
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
-    Instance.new("UIStroke", Btn).Color = Color3.fromRGB(80, 80, 80)
+    Btn.Size, Btn.BackgroundColor3, Btn.Text = UDim2.new(0.9, 0, 0, 34), color or Color3.fromRGB(30, 30, 30), text
+    Btn.TextColor3, Btn.Font, Btn.TextSize, Btn.LayoutOrder = Color3.fromRGB(220, 220, 220), Enum.Font.Gotham, 12, #parent:GetChildren()
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+    Instance.new("UIStroke", Btn).Color = Color3.fromRGB(50, 50, 50)
     if cb then Btn.MouseButton1Click:Connect(cb) end
     return Btn
 end
 
 local function CreateSlider(parent, name, key, min, max, isFloat)
     local Frame = Instance.new("Frame", parent)
-    Frame.Size, Frame.BackgroundColor3, Frame.LayoutOrder = UDim2.new(0.9, 0, 0, 55), Color3.fromRGB(30, 30, 30), #parent:GetChildren()
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
-    Instance.new("UIStroke", Frame).Color = Color3.fromRGB(50, 50, 50)
+    Frame.Size, Frame.BackgroundColor3, Frame.LayoutOrder = UDim2.new(0.9, 0, 0, 45), Color3.fromRGB(24, 24, 24), #parent:GetChildren()
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
+    Instance.new("UIStroke", Frame).Color = Color3.fromRGB(45, 45, 45)
 
     local Txt = Instance.new("TextLabel", Frame)
-    Txt.Size, Txt.Position, Txt.BackgroundTransparency, Txt.TextXAlignment = UDim2.new(1, -20, 0, 25), UDim2.new(0, 10, 0, 5), 1, Enum.TextXAlignment.Left
-    Txt.Text, Txt.TextColor3, Txt.Font, Txt.TextSize = name .. ": " .. tostring(Config[key]), Color3.fromRGB(255, 255, 255), Enum.Font.GothamSemibold, 12
+    Txt.Size, Txt.Position, Txt.BackgroundTransparency, Txt.TextXAlignment = UDim2.new(1, -20, 0, 20), UDim2.new(0, 10, 0, 5), 1, Enum.TextXAlignment.Left
+    Txt.Text, Txt.TextColor3, Txt.Font, Txt.TextSize = name .. ": " .. tostring(Config[key]), Color3.fromRGB(200, 200, 200), Enum.Font.Gotham, 11
 
     local BG = Instance.new("TextButton", Frame)
-    BG.Size, BG.Position, BG.BackgroundColor3, BG.Text = UDim2.new(1, -20, 0, 6), UDim2.new(0, 10, 0, 35), Color3.fromRGB(15, 15, 15), ""
+    BG.Size, BG.Position, BG.BackgroundColor3, BG.Text = UDim2.new(1, -20, 0, 4), UDim2.new(0, 10, 0, 30), Color3.fromRGB(15, 15, 15), ""
     Instance.new("UICorner", BG).CornerRadius = UDim.new(1, 0)
 
     local Fill = Instance.new("Frame", BG)
@@ -294,57 +264,92 @@ local function CreateSlider(parent, name, key, min, max, isFloat)
 end
 
 -- ========================================================================
--- MONTAGEM DAS ABAS (Tópicos Perfeitos e Cores Fixadas)
+-- O SELETOR DE CORES PROFISSIONAL (RGB HUE PICKER)
 -- ========================================================================
-local TabC = CreateTab("⚔️ AIMBOT", 1)
-local TabV = CreateTab("👁️ VISUAIS", 2)
-local TabA = CreateTab("🔥 APELAÇÃO", 3) 
-local TabS = CreateTab("⚙️ CONFIG", 4)
+local function CreateColorPicker(parent, name, key, callback)
+    local Frame = Instance.new("Frame", parent)
+    Frame.Size, Frame.BackgroundColor3, Frame.LayoutOrder = UDim2.new(0.9, 0, 0, 50), Color3.fromRGB(24, 24, 24), #parent:GetChildren()
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
+    Instance.new("UIStroke", Frame).Color = Color3.fromRGB(45, 45, 45)
 
-Tabs[1].Btn.TextColor3, Tabs[1].Btn.BackgroundColor3, Tabs[1].Scroll.Visible, CurrentTab = Color3.fromRGB(255, 255, 255), Color3.fromRGB(35, 35, 35), true, Tabs[1]
+    local Txt = Instance.new("TextLabel", Frame)
+    Txt.Size, Txt.Position, Txt.BackgroundTransparency, Txt.TextXAlignment = UDim2.new(1, -20, 0, 20), UDim2.new(0, 10, 0, 5), 1, Enum.TextXAlignment.Left
+    Txt.Text, Txt.TextColor3, Txt.Font, Txt.TextSize = name, Color3.fromRGB(200, 200, 200), Enum.Font.Gotham, 11
+
+    local Display = Instance.new("Frame", Frame)
+    Display.Size, Display.Position, Display.BackgroundColor3 = UDim2.new(0, 16, 0, 16), UDim2.new(1, -26, 0, 7), Config[key]
+    Instance.new("UICorner", Display).CornerRadius = UDim.new(1, 0)
+    Instance.new("UIStroke", Display).Color = Color3.fromRGB(50, 50, 50)
+
+    local SliderBG = Instance.new("TextButton", Frame)
+    SliderBG.Size, SliderBG.Position, SliderBG.Text = UDim2.new(1, -20, 0, 8), UDim2.new(0, 10, 0, 32), ""
+    Instance.new("UICorner", SliderBG).CornerRadius = UDim.new(1, 0)
+    
+    local UIGradient = Instance.new("UIGradient", SliderBG)
+    UIGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.166, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(0.666, Color3.fromRGB(0, 0, 255)),
+        ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+    })
+
+    local drag = false
+    local function Update(input)
+        local pos = math.clamp((input.Position.X - SliderBG.AbsolutePosition.X) / SliderBG.AbsoluteSize.X, 0, 1)
+        local newColor = Color3.fromHSV(pos, 1, 1)
+        Config[key] = newColor
+        Display.BackgroundColor3 = newColor
+        if callback then callback(newColor) end
+    end
+    SliderBG.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = true Update(i) end end)
+    UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = false end end)
+    UIS.InputChanged:Connect(function(i) if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then Update(i) end end)
+end
+
+-- ========================================================================
+-- MONTAGEM DAS ABAS
+-- ========================================================================
+local TabC = CreateTab("AIMBOT", 1)
+local TabV = CreateTab("VISUAIS", 2)
+local TabA = CreateTab("APELAÇÃO", 3) 
+local TabS = CreateTab("CONFIG", 4)
+
+Tabs[1].Btn.TextColor3, Tabs[1].Btn.BackgroundColor3, Tabs[1].Scroll.Visible, CurrentTab = Color3.fromRGB(255, 255, 255), Color3.fromRGB(25, 25, 25), true, Tabs[1]
 
 -- ================== ABA 1: COMBATE ==================
 CreateSubCategory(TabC, "MOTOR PRINCIPAL")
 CreateToggle(TabC, "Ativar Aimbot", "Aimbot", function(s) if not s then LockedTarget = nil end end)
 
-local AimMethodBtn = CreateButton(TabC, "SISTEMA: " .. (Config.AimMethod == "Mobile" and "MOBILE (CFrame)" or "PC (Mouse)"), nil, Color3.fromRGB(30, 40, 50))
+local AimMethodBtn = CreateButton(TabC, "SISTEMA: " .. (Config.AimMethod == "Mobile" and "MOBILE (CFrame)" or "PC (Mouse)"), nil)
 AimMethodBtn.MouseButton1Click:Connect(function()
     Config.AimMethod = Config.AimMethod == "Mobile" and "PC" or "Mobile"
     AimMethodBtn.Text = "SISTEMA: " .. (Config.AimMethod == "Mobile" and "MOBILE (CFrame)" or "PC (Mouse)")
 end)
 
-local AimModeBtn = CreateButton(TabC, "MODO: " .. Config.AimMode, nil, Color3.fromRGB(20, 60, 30))
-AimModeBtn.MouseButton1Click:Connect(function()
-    Config.AimMode = Config.AimMode == "Sempre Grudado" and "Ao Atirar/Clicar" or "Sempre Grudado"
-    AimModeBtn.Text = "MODO: " .. Config.AimMode
-end)
-
 CreateSubCategory(TabC, "CONFIGURAÇÃO DE MIRA")
-local TargetPartBtn = CreateButton(TabC, "MIRA NO: " .. (Config.TargetPart == "Head" and "CABEÇA (Head)" or "PEITO (Torso)"), nil, Color3.fromRGB(40, 40, 40))
+local TargetPartBtn = CreateButton(TabC, "MIRA NO: " .. (Config.TargetPart == "Head" and "CABEÇA (Head)" or "PEITO (Torso)"), nil)
 TargetPartBtn.MouseButton1Click:Connect(function()
     Config.TargetPart = Config.TargetPart == "Head" and "Torso" or "Head"
     TargetPartBtn.Text = "MIRA NO: " .. (Config.TargetPart == "Head" and "CABEÇA (Head)" or "PEITO (Torso)")
 end)
 
+CreateToggle(TabC, "Exigir Clique na Tela para Mirar", "RequireAiming")
 CreateToggle(TabC, "Mirar em NPCs e Facções", "TargetNPCs")
 CreateToggle(TabC, "Predição (Calcular Trajetória)", "Prediction")
 CreateToggle(TabC, "Ocultar Alvos Atrás da Parede", "WallCheck")
 
 CreateSubCategory(TabC, "AJUSTES FINOS")
 CreateToggle(TabC, "Mostrar Circulo FOV", "ShowFov")
-
-local FovColorBtn = CreateButton(TabC, "Cor do FOV: " .. Config.FovColorName, nil, Color3.fromRGB(30, 30, 30))
-FovColorBtn.MouseButton1Click:Connect(function()
-    local nName, nColor = GetNextColor(Config.FovColorName)
-    Config.FovColorName, Config.FovColor, FovColorBtn.Text = nName, nColor, "Cor do FOV: " .. nName
-end)
-
-CreateToggle(TabC, "Ativar FOV Rainbow (Pisca-Pisca)", "FovRainbow")
+CreateColorPicker(TabC, "Cor do FOV", "FovColor")
+CreateToggle(TabC, "Ativar FOV Rainbow", "FovRainbow")
 CreateSlider(TabC, "Tamanho do FOV", "Fov", 50, 600, false)
 CreateSlider(TabC, "Suavidade / Velocidade", "Smoothness", 0.01, 1.0, true)
 
 -- ================== ABA 2: VISUAIS ==================
-CreateSubCategory(TabV, "ESP GLOBAL (JOGADORES)")
+CreateSubCategory(TabV, "ESP GLOBAL")
 CreateToggle(TabV, "Pintar Jogadores (Chams)", "ESP_Chams", function(s) if not s then for _, hl in pairs(Highlights) do hl:Destroy() end table.clear(Highlights) end end)
 CreateToggle(TabV, "Caixa de Seleção (Box)", "ESP_Box")
 CreateToggle(TabV, "Linhas até o alvo (Tracers)", "ESP_Tracer")
@@ -352,26 +357,17 @@ CreateToggle(TabV, "Mostrar Esqueleto (Skeleton)", "ESP_Skeleton")
 CreateToggle(TabV, "Mostrar Distância", "ESP_Distance")
 
 CreateSubCategory(TabV, "CORES DO ESP")
-local ESPColorBtn = CreateButton(TabV, "Cor Principal ESP: " .. Config.ESPColorName, nil, Color3.fromRGB(30, 30, 30))
-ESPColorBtn.MouseButton1Click:Connect(function()
-    local nName, nColor = GetNextColor(Config.ESPColorName)
-    Config.ESPColorName, Config.ESPColor, ESPColorBtn.Text = nName, nColor, "Cor Principal ESP: " .. nName
-end)
-CreateToggle(TabV, "Ativar ESP Rainbow (Pisca-Pisca)", "ESPRainbow")
+CreateColorPicker(TabV, "Cor Principal ESP", "ESPColor")
+CreateToggle(TabV, "Ativar ESP Rainbow", "ESPRainbow")
 
 -- ================== ABA 3: APELAÇÃO ==================
 CreateSubCategory(TabA, "MODOS ROUBADOS")
 CreateToggle(TabA, "God Mode (Vida Infinita / Auto-Heal)", "GodMode")
-CreateToggle(TabA, "Ativar No-Clip (Atravessar Paredes)", "NoClip", function(s) Notify("No-Clip", s and "Você é um fantasma!" or "Física Restaurada.") end)
+CreateToggle(TabA, "Ativar No-Clip (Atravessar Paredes)", "NoClip", function(s) Notify("No-Clip", s and "Ativado" or "Desativado") end)
 
 -- ================== ABA 4: CONFIG ==================
 CreateSubCategory(TabS, "MENU E TECLAS")
-local MenuColorBtn = CreateButton(TabS, "Cor do Tema: " .. Config.MenuColorName, nil, Color3.fromRGB(30, 30, 30))
-MenuColorBtn.MouseButton1Click:Connect(function()
-    local nName, nColor = GetNextColor(Config.MenuColorName)
-    Config.MenuColorName, MenuColorBtn.Text = nName, "Cor do Tema: " .. nName
-    UpdateMenuColor(nColor)
-end)
+CreateColorPicker(TabS, "Cor do Tema (Geral)", "MenuColor", function(c) UpdateMenuColor(c) end)
 
 local BindBtn = CreateButton(TabS, "Ocultar Menu: " .. Config.MenuKeybind.Name, nil)
 BindBtn.MouseButton1Click:Connect(function() IsBindingMenu, BindBtn.Text = true, "Pressione a nova tecla..." end)
@@ -383,6 +379,7 @@ UIS.InputBegan:Connect(function(input, gp)
     elseif not gp and input.KeyCode == Config.MenuKeybind then
         MainFrame.Visible = not MainFrame.Visible
     end
+    -- Lógica do RequireAiming Clássico
     if input.UserInputType == Enum.UserInputType.MouseButton2 or input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then IsAiming = true end
 end)
 
@@ -395,7 +392,7 @@ end)
 CreateToggle(TabS, "Botão Flutuante (Mobile)", "ShowMobileButton", function(s) MobileBtn.Visible = s end)
 
 -- ========================================================================
--- SISTEMA DINÂMICO E ESP COMPLETO (SKELETON & TRACERS)
+-- SISTEMA DINÂMICO E ESP COMPLETO
 -- ========================================================================
 local function AddEntity(obj)
     if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and (obj:FindFirstChild("Head") or obj:FindFirstChild("Torso") or obj:FindFirstChild("UpperTorso")) then
@@ -451,6 +448,23 @@ local skeletonConnections = {
     {"Head", "Torso"}, {"Torso", "Left Arm"}, {"Torso", "Right Arm"}, {"Torso", "Left Leg"}, {"Torso", "Right Leg"}
 }
 
+local function GetClosest()
+    local target, shortest = nil, Config.Fov
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    for _, char in pairs(ActiveEntities) do
+        local pName = (Config.TargetPart == "Torso" and not char:FindFirstChild("Torso")) and "UpperTorso" or Config.TargetPart
+        local part = char:FindFirstChild(pName)
+        if part and Validate(part, char) then
+            local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if onScreen then
+                local mag = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                if mag < shortest then shortest, target = mag, part end
+            end
+        end
+    end
+    return target
+end
+
 RunService.RenderStepped:Connect(function()
     pcall(function()
         Camera = workspace.CurrentCamera
@@ -481,13 +495,9 @@ RunService.RenderStepped:Connect(function()
                 if not Drawings[char] then
                     Drawings[char] = { Box = Drawing.new("Square"), Text = Drawing.new("Text"), Tracer = Drawing.new("Line"), Skeleton = {} }
                     Drawings[char].Box.Thickness, Drawings[char].Box.Filled = 1.5, false
-                    Drawings[char].Text.Size, Drawings[char].Text.Center, Drawings[char].Text.Outline = 16, true, true
+                    Drawings[char].Text.Size, Drawings[char].Text.Center, Drawings[char].Text.Outline = 13, true, true
                     Drawings[char].Tracer.Thickness = 1.5
-                    for i = 1, #skeletonConnections do
-                        local line = Drawing.new("Line")
-                        line.Thickness = 1.5
-                        table.insert(Drawings[char].Skeleton, line)
-                    end
+                    for i = 1, #skeletonConnections do table.insert(Drawings[char].Skeleton, Drawing.new("Line")) end
                 end
 
                 local esp = Drawings[char]
@@ -498,20 +508,16 @@ RunService.RenderStepped:Connect(function()
                     local h, w = 4000 / dist, (4000 / dist) * 0.6
                     
                     esp.Box.Size, esp.Box.Position, esp.Box.Color, esp.Box.Visible = Vector2.new(w, h), Vector2.new(pos.X - w/2, pos.Y - h/2), currentESPColor, Config.ESP_Box
-                    
-                    -- Distância (Permanece BRANCA, como você pediu)
                     esp.Text.Text, esp.Text.Position, esp.Text.Color, esp.Text.Visible = string.format("[%d M]", math.floor(dist)), Vector2.new(pos.X, pos.Y + h/2 + 5), Color3.fromRGB(255,255,255), Config.ESP_Distance
-                    
-                    -- Tracer
                     esp.Tracer.From, esp.Tracer.To, esp.Tracer.Color, esp.Tracer.Visible = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y), Vector2.new(pos.X, pos.Y + h/2), currentESPColor, Config.ESP_Tracer
 
-                    -- Skeleton R6/R15
                     for i, conn in ipairs(skeletonConnections) do
                         local partA, partB = char:FindFirstChild(conn[1]), char:FindFirstChild(conn[2])
                         if Config.ESP_Skeleton and partA and partB then
                             local posA, visA = Camera:WorldToViewportPoint(partA.Position)
                             local posB, visB = Camera:WorldToViewportPoint(partB.Position)
                             if visA or visB then
+                                esp.Skeleton[i].Thickness = 1.5
                                 esp.Skeleton[i].From, esp.Skeleton[i].To, esp.Skeleton[i].Color, esp.Skeleton[i].Visible = Vector2.new(posA.X, posA.Y), Vector2.new(posB.X, posB.Y), currentESPColor, true
                             else esp.Skeleton[i].Visible = false end
                         else esp.Skeleton[i].Visible = false end
@@ -523,25 +529,12 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- LÓGICA DO AIMBOT
+        -- LÓGICA DO AIMBOT CLÁSSICO
         local canAim = Config.Aimbot
-        if Config.AimMode == "Ao Atirar/Clicar" and not IsAiming then canAim = false; LockedTarget = nil end
+        if Config.RequireAiming and not IsAiming then canAim = false; LockedTarget = nil end
 
         if canAim then
-            if not LockedTarget or not Validate(LockedTarget, LockedTarget.Parent) then
-                local shortest, center = Config.Fov, Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                for _, char in pairs(ActiveEntities) do
-                    local pName = (Config.TargetPart == "Torso" and not char:FindFirstChild("Torso")) and "UpperTorso" or Config.TargetPart
-                    local part = char:FindFirstChild(pName)
-                    if part and Validate(part, char) then
-                        local pos, onSc = Camera:WorldToViewportPoint(part.Position)
-                        if onSc then
-                            local mag = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                            if mag < shortest then shortest, LockedTarget = mag, part end
-                        end
-                    end
-                end
-            end
+            if not LockedTarget or not Validate(LockedTarget, LockedTarget.Parent) then LockedTarget = GetClosest() end
             
             if LockedTarget then
                 local aimPosition = LockedTarget.Position
@@ -574,5 +567,5 @@ RunService.Stepped:Connect(function()
     end
 end)
 
-UpdateMenuColor(Config.MenuColor) -- Aplica a cor padrão na inicialização
-Notify("SIXCROW", "BloxStrike Predator Carregado! Layout Corrigido.")
+UpdateMenuColor(Config.MenuColor)
+Notify("SIXCROW", "BloxStrike Pro Carregado! UI Clean + RGB Ativo.")
