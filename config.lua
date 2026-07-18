@@ -10,7 +10,8 @@ print("⚡ SixCrow Config: Procurando script para o ID: " .. tostring(PlaceId))
 local JogosSuportados = {
     [2753915549] = "bloxfruits.lua", 
     [1550233908] = "grind_simulator.lua",
-    [114234929420007] = "bloxstrike.lua"
+    [114234929420007] = "bloxstrike.lua",
+    [142823291] = "MUDER_MM2.lua",
 }
 
 local ArquivoParaCarregar = JogosSuportados[PlaceId] or "master_menu.lua"
