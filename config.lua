@@ -12,7 +12,7 @@ local JogosSuportados = {
     [1550233908] = "grind_simulator.lua",
     [114234929420007] = "bloxstrike.lua",
     [142823291] = "MUDER_MM2.lua",
-    [11392373641] = "eternal_fnf.lua",
+    [125998488582708] = "eternal_fnf.lua",
 }
 
 local ArquivoParaCarregar = JogosSuportados[PlaceId] or "master_menu.lua"
