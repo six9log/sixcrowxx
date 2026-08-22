@@ -1,6 +1,6 @@
 -- [[ SIXCROW V9.5 | BLOXSTRIKE PRO ]]
 -- Clean UI, Color Pickers RGB e Aimbot Clássico
--- Otimizado para POCO M7 / Codex / Delta
+-- Otimizado para POCO M7 / Codex / Delta (Performance Update)
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 
@@ -9,7 +9,7 @@ local Config = {
     Aimbot = false,
     AimMethod = "Mobile", 
     TargetPart = "Head",
-    RequireAiming = false, -- Volta do clássico: Só atira quando clica/toca
+    RequireAiming = false, -- Só atira quando clica/toca
     Prediction = true, 
     BulletSpeed = 2500,
     
@@ -64,7 +64,7 @@ end
 
 local function UpdateMenuColor(newColor)
     Config.MenuColor = newColor
-    for _, item in pairs(ThemeElements) do
+    for _, item in ipairs(ThemeElements) do
         if item.obj and item.obj.Parent then 
             if not item.cond or item.cond() then
                 item.obj[item.prop] = newColor 
@@ -74,11 +74,17 @@ local function UpdateMenuColor(newColor)
 end
 
 local function RandomName() return HttpService:GenerateGUID(false):gsub("-", "") end
-local function Notify(title, text) pcall(function() game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 4}) end) end
+local function Notify(title, text) 
+    pcall(function() 
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 4}) 
+    end) 
+end
 
 local SafeGUI_Parent
 pcall(function() SafeGUI_Parent = (gethui and gethui()) or CoreGui end)
-if not SafeGUI_Parent then SafeGUI_Parent = LP:WaitForChild("PlayerGui") end
+if not SafeGUI_Parent or not SafeGUI_Parent:IsA("PlayerGui") and not SafeGUI_Parent:IsA("CoreGui") then 
+    SafeGUI_Parent = LP:WaitForChild("PlayerGui") 
+end
 
 local StealthGUI = Instance.new("ScreenGui")
 StealthGUI.Name = RandomName()
@@ -155,7 +161,7 @@ ContentContainer.Size, ContentContainer.Position, ContentContainer.BackgroundTra
 local Tabs, CurrentTab = {}, nil
 
 -- ========================================================================
--- COMPONENTES DA UI (Com visual Flat/Limpo)
+-- COMPONENTES DA UI
 -- ========================================================================
 local function CreateTab(name, layoutOrder)
     local TabBtn = Instance.new("TextButton", TabBar)
@@ -263,9 +269,6 @@ local function CreateSlider(parent, name, key, min, max, isFloat)
     UIS.InputChanged:Connect(function(i) if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then Update(i) end end)
 end
 
--- ========================================================================
--- O SELETOR DE CORES PROFISSIONAL (RGB HUE PICKER)
--- ========================================================================
 local function CreateColorPicker(parent, name, key, callback)
     local Frame = Instance.new("Frame", parent)
     Frame.Size, Frame.BackgroundColor3, Frame.LayoutOrder = UDim2.new(0.9, 0, 0, 50), Color3.fromRGB(24, 24, 24), #parent:GetChildren()
@@ -392,28 +395,45 @@ end)
 CreateToggle(TabS, "Botão Flutuante (Mobile)", "ShowMobileButton", function(s) MobileBtn.Visible = s end)
 
 -- ========================================================================
--- SISTEMA DINÂMICO E ESP COMPLETO
+-- SISTEMA DINÂMICO E ESP COMPLETO (OTIMIZADO)
 -- ========================================================================
 local function AddEntity(obj)
     if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and (obj:FindFirstChild("Head") or obj:FindFirstChild("Torso") or obj:FindFirstChild("UpperTorso")) then
-        if not table.find(ActiveEntities, obj) and obj ~= LP.Character then table.insert(ActiveEntities, obj) end
+        if not table.find(ActiveEntities, obj) and obj ~= LP.Character then 
+            table.insert(ActiveEntities, obj) 
+        end
     end
 end
 
-for _, p in pairs(Players:GetPlayers()) do if p.Character then AddEntity(p.Character) end end
-for _, obj in pairs(workspace:GetDescendants()) do AddEntity(obj) end
-workspace.DescendantAdded:Connect(AddEntity)
+for _, p in ipairs(Players:GetPlayers()) do if p.Character then AddEntity(p.Character) end end
+for _, obj in ipairs(workspace:GetDescendants()) do 
+    if obj:IsA("Model") then AddEntity(obj) end 
+end
+
+-- Uso de task.defer para evitar lag de micro-congelamentos no mobile
+workspace.DescendantAdded:Connect(function(obj)
+    if obj.ClassName == "Model" then
+        task.defer(AddEntity, obj)
+    end
+end)
 Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(AddEntity) end)
 
 local function CleanEntities()
     for i = #ActiveEntities, 1, -1 do
         local char = ActiveEntities[i]
-        if not char or not char.Parent or not char:FindFirstChildOfClass("Humanoid") or char:FindFirstChildOfClass("Humanoid").Health <= 0 then
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        
+        if not char or not char.Parent or not hum or hum.Health <= 0 then
             table.remove(ActiveEntities, i)
-            if Highlights[char] then Highlights[char]:Destroy() Highlights[char] = nil end
+            if Highlights[char] then 
+                Highlights[char]:Destroy() 
+                Highlights[char] = nil 
+            end
             if Drawings[char] then 
-                Drawings[char].Box:Remove() Drawings[char].Text:Remove() Drawings[char].Tracer:Remove()
-                for _, line in pairs(Drawings[char].Skeleton) do line:Remove() end
+                Drawings[char].Box:Remove() 
+                Drawings[char].Text:Remove() 
+                Drawings[char].Tracer:Remove()
+                for _, line in ipairs(Drawings[char].Skeleton) do line:Remove() end
                 Drawings[char] = nil 
             end
         end
@@ -451,7 +471,7 @@ local skeletonConnections = {
 local function GetClosest()
     local target, shortest = nil, Config.Fov
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    for _, char in pairs(ActiveEntities) do
+    for _, char in ipairs(ActiveEntities) do
         local pName = (Config.TargetPart == "Torso" and not char:FindFirstChild("Torso")) and "UpperTorso" or Config.TargetPart
         local part = char:FindFirstChild(pName)
         if part and Validate(part, char) then
@@ -477,7 +497,7 @@ RunService.RenderStepped:Connect(function()
         
         CleanEntities()
 
-        for _, char in pairs(ActiveEntities) do
+        for _, char in ipairs(ActiveEntities) do
             local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
             
             if Config.ESP_Chams then
@@ -524,7 +544,7 @@ RunService.RenderStepped:Connect(function()
                     end
                 else
                     esp.Box.Visible, esp.Text.Visible, esp.Tracer.Visible = false, false, false
-                    for _, line in pairs(esp.Skeleton) do line.Visible = false end
+                    for _, line in ipairs(esp.Skeleton) do line.Visible = false end
                 end
             end
         end
@@ -536,7 +556,7 @@ RunService.RenderStepped:Connect(function()
         if canAim then
             if not LockedTarget or not Validate(LockedTarget, LockedTarget.Parent) then LockedTarget = GetClosest() end
             
-            if LockedTarget then
+            if LockedTarget and LockedTarget.Parent then
                 local aimPosition = LockedTarget.Position
                 if Config.Prediction and LockedTarget.Parent:FindFirstChild("HumanoidRootPart") then
                     local velocity = LockedTarget.Parent.HumanoidRootPart.AssemblyLinearVelocity
@@ -557,12 +577,18 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- LÓGICA DO NO-CLIP E GOD MODE
+-- LÓGICA DO NO-CLIP E GOD MODE OTIMIZADA PARA MOBILE
 RunService.Stepped:Connect(function()
     if LP.Character then
-        if Config.GodMode and LP.Character:FindFirstChild("Humanoid") then LP.Character.Humanoid.Health = LP.Character.Humanoid.MaxHealth end
+        if Config.GodMode and LP.Character:FindFirstChild("Humanoid") then 
+            LP.Character.Humanoid.Health = LP.Character.Humanoid.MaxHealth 
+        end
         if Config.NoClip then
-            for _, part in pairs(LP.Character:GetDescendants()) do if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end end
+            for _, part in ipairs(LP.Character:GetDescendants()) do 
+                if part:IsA("BasePart") and part.CanCollide then 
+                    part.CanCollide = false 
+                end 
+            end
         end
     end
 end)
