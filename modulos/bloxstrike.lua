@@ -1,6 +1,6 @@
--- [[ SIXCROW V9.5 | BLOXSTRIKE PRO ]]
+-- [[ SIXCROW V9.5 | BLOXSTRIKE PRO (CORRECTED & OPTIMIZED) ]]
 -- Clean UI, Color Pickers RGB e Aimbot Clássico
--- Otimizado para POCO M7 / Codex / Delta (Performance Update)
+-- Totalmente compatível com Executores Mobile (Sem API Drawing)
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 
@@ -9,7 +9,7 @@ local Config = {
     Aimbot = false,
     AimMethod = "Mobile", 
     TargetPart = "Head",
-    RequireAiming = false, -- Só atira quando clica/toca
+    RequireAiming = false,
     Prediction = true, 
     BulletSpeed = 2500,
     
@@ -39,8 +39,7 @@ local Config = {
     -- Sistema
     MenuKeybind = Enum.KeyCode.Insert,
     ShowMobileButton = true, 
-    MenuColor = Color3.fromRGB(0, 255, 100),
-    SaveFileName = "SixCrow_BloxStrike_V95.json"
+    MenuColor = Color3.fromRGB(0, 255, 100)
 }
 
 -- ========================================================================
@@ -91,6 +90,12 @@ StealthGUI.Name = RandomName()
 StealthGUI.ResetOnSpawn = false
 StealthGUI.IgnoreGuiInset = true 
 StealthGUI.Parent = SafeGUI_Parent
+
+local ESP_GUI = Instance.new("ScreenGui")
+ESP_GUI.Name = RandomName() .. "_ESP"
+ESP_GUI.ResetOnSpawn = false
+ESP_GUI.IgnoreGuiInset = true
+ESP_GUI.Parent = SafeGUI_Parent
 
 -- ========================================================================
 -- INTERFACE GRÁFICA (CLEAN & PROFISSIONAL)
@@ -395,7 +400,7 @@ end)
 CreateToggle(TabS, "Botão Flutuante (Mobile)", "ShowMobileButton", function(s) MobileBtn.Visible = s end)
 
 -- ========================================================================
--- SISTEMA DINÂMICO E ESP COMPLETO (OTIMIZADO)
+-- SISTEMA DINÂMICO E ESP COMPLETO (REFATORADO PARA NATIVO)
 -- ========================================================================
 local function AddEntity(obj)
     if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and (obj:FindFirstChild("Head") or obj:FindFirstChild("Torso") or obj:FindFirstChild("UpperTorso")) then
@@ -410,13 +415,12 @@ for _, obj in ipairs(workspace:GetDescendants()) do
     if obj:IsA("Model") then AddEntity(obj) end 
 end
 
--- Uso de task.defer para evitar lag de micro-congelamentos no mobile
-workspace.DescendantAdded:Connect(function(obj)
-    if obj.ClassName == "Model" then
-        task.defer(AddEntity, obj)
-    end
+task.defer(function()
+    workspace.DescendantAdded:Connect(function(obj)
+        if obj.ClassName == "Model" then task.defer(AddEntity, obj) end
+    end)
+    Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(AddEntity) end)
 end)
-Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(AddEntity) end)
 
 local function CleanEntities()
     for i = #ActiveEntities, 1, -1 do
@@ -430,10 +434,10 @@ local function CleanEntities()
                 Highlights[char] = nil 
             end
             if Drawings[char] then 
-                Drawings[char].Box:Remove() 
-                Drawings[char].Text:Remove() 
-                Drawings[char].Tracer:Remove()
-                for _, line in ipairs(Drawings[char].Skeleton) do line:Remove() end
+                Drawings[char].Box.frame:Destroy() 
+                Drawings[char].Text:Destroy() 
+                Drawings[char].Tracer:Destroy()
+                for _, line in ipairs(Drawings[char].Skeleton) do line:Destroy() end
                 Drawings[char] = nil 
             end
         end
@@ -485,6 +489,28 @@ local function GetClosest()
     return target
 end
 
+-- Funções Nativas de Desenho (Substituição da API Drawing)
+local function DrawLine2D(frame, p1, p2, color, visible)
+    if not visible then frame.Visible = false return end
+    local center = (p1 + p2) / 2
+    local distance = (p2 - p1).Magnitude
+    local angle = math.atan2(p2.Y - p1.Y, p2.X - p1.X)
+    frame.Position = UDim2.new(0, center.X, 0, center.Y)
+    frame.Size = UDim2.new(0, distance, 0, 1.5)
+    frame.Rotation = math.deg(angle)
+    frame.BackgroundColor3 = color
+    frame.Visible = true
+end
+
+local function CreateNativeLine()
+    local line = Instance.new("Frame")
+    line.AnchorPoint = Vector2.new(0.5, 0.5)
+    line.BorderSizePixel = 0
+    line.Parent = ESP_GUI
+    line.Visible = false
+    return line
+end
+
 RunService.RenderStepped:Connect(function()
     pcall(function()
         Camera = workspace.CurrentCamera
@@ -503,7 +529,7 @@ RunService.RenderStepped:Connect(function()
             if Config.ESP_Chams then
                 if not Highlights[char] then
                     local hl = Instance.new("Highlight")
-                    hl.FillTransparency, hl.OutlineTransparency, hl.Parent = 0.5, 0, SafeGUI_Parent
+                    hl.FillTransparency, hl.OutlineTransparency, hl.Parent = 0.5, 0, CoreGui
                     Highlights[char] = hl
                 end
                 Highlights[char].Adornee, Highlights[char].FillColor, Highlights[char].OutlineColor, Highlights[char].Enabled = char, currentESPColor, currentESPColor, true
@@ -511,13 +537,29 @@ RunService.RenderStepped:Connect(function()
                 if Highlights[char] then Highlights[char].Enabled = false end
             end
 
-            if Drawing and hrp then
+            if hrp then
                 if not Drawings[char] then
-                    Drawings[char] = { Box = Drawing.new("Square"), Text = Drawing.new("Text"), Tracer = Drawing.new("Line"), Skeleton = {} }
-                    Drawings[char].Box.Thickness, Drawings[char].Box.Filled = 1.5, false
-                    Drawings[char].Text.Size, Drawings[char].Text.Center, Drawings[char].Text.Outline = 13, true, true
-                    Drawings[char].Tracer.Thickness = 1.5
-                    for i = 1, #skeletonConnections do table.insert(Drawings[char].Skeleton, Drawing.new("Line")) end
+                    local boxFrame = Instance.new("Frame")
+                    boxFrame.BackgroundTransparency = 1
+                    boxFrame.Parent = ESP_GUI
+                    local boxStroke = Instance.new("UIStroke", boxFrame)
+                    boxStroke.Thickness = 1.5
+                    
+                    local txtLabel = Instance.new("TextLabel")
+                    txtLabel.BackgroundTransparency = 1
+                    txtLabel.Font = Enum.Font.GothamBold
+                    txtLabel.TextSize = 13
+                    txtLabel.TextColor3 = Color3.new(1, 1, 1)
+                    txtLabel.Parent = ESP_GUI
+                    Instance.new("UIStroke", txtLabel)
+
+                    Drawings[char] = { 
+                        Box = {frame = boxFrame, stroke = boxStroke}, 
+                        Text = txtLabel, 
+                        Tracer = CreateNativeLine(), 
+                        Skeleton = {} 
+                    }
+                    for i = 1, #skeletonConnections do table.insert(Drawings[char].Skeleton, CreateNativeLine()) end
                 end
 
                 local esp = Drawings[char]
@@ -527,9 +569,24 @@ RunService.RenderStepped:Connect(function()
                     local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
                     local h, w = 4000 / dist, (4000 / dist) * 0.6
                     
-                    esp.Box.Size, esp.Box.Position, esp.Box.Color, esp.Box.Visible = Vector2.new(w, h), Vector2.new(pos.X - w/2, pos.Y - h/2), currentESPColor, Config.ESP_Box
-                    esp.Text.Text, esp.Text.Position, esp.Text.Color, esp.Text.Visible = string.format("[%d M]", math.floor(dist)), Vector2.new(pos.X, pos.Y + h/2 + 5), Color3.fromRGB(255,255,255), Config.ESP_Distance
-                    esp.Tracer.From, esp.Tracer.To, esp.Tracer.Color, esp.Tracer.Visible = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y), Vector2.new(pos.X, pos.Y + h/2), currentESPColor, Config.ESP_Tracer
+                    if Config.ESP_Box then
+                        esp.Box.frame.Size = UDim2.new(0, w, 0, h)
+                        esp.Box.frame.Position = UDim2.new(0, pos.X - w/2, 0, pos.Y - h/2)
+                        esp.Box.stroke.Color = currentESPColor
+                        esp.Box.frame.Visible = true
+                    else esp.Box.frame.Visible = false end
+
+                    if Config.ESP_Distance then
+                        esp.Text.Text = string.format("[%d M]", math.floor(dist))
+                        esp.Text.Position = UDim2.new(0, pos.X, 0, pos.Y + h/2 + 5)
+                        esp.Text.Visible = true
+                    else esp.Text.Visible = false end
+
+                    if Config.ESP_Tracer then
+                        local screenBottom = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                        local targetPos = Vector2.new(pos.X, pos.Y + h/2)
+                        DrawLine2D(esp.Tracer, screenBottom, targetPos, currentESPColor, true)
+                    else esp.Tracer.Visible = false end
 
                     for i, conn in ipairs(skeletonConnections) do
                         local partA, partB = char:FindFirstChild(conn[1]), char:FindFirstChild(conn[2])
@@ -537,13 +594,12 @@ RunService.RenderStepped:Connect(function()
                             local posA, visA = Camera:WorldToViewportPoint(partA.Position)
                             local posB, visB = Camera:WorldToViewportPoint(partB.Position)
                             if visA or visB then
-                                esp.Skeleton[i].Thickness = 1.5
-                                esp.Skeleton[i].From, esp.Skeleton[i].To, esp.Skeleton[i].Color, esp.Skeleton[i].Visible = Vector2.new(posA.X, posA.Y), Vector2.new(posB.X, posB.Y), currentESPColor, true
+                                DrawLine2D(esp.Skeleton[i], Vector2.new(posA.X, posA.Y), Vector2.new(posB.X, posB.Y), currentESPColor, true)
                             else esp.Skeleton[i].Visible = false end
                         else esp.Skeleton[i].Visible = false end
                     end
                 else
-                    esp.Box.Visible, esp.Text.Visible, esp.Tracer.Visible = false, false, false
+                    esp.Box.frame.Visible, esp.Text.Visible, esp.Tracer.Visible = false, false, false
                     for _, line in ipairs(esp.Skeleton) do line.Visible = false end
                 end
             end
@@ -567,7 +623,7 @@ RunService.RenderStepped:Connect(function()
                 if onScreen then
                     if Config.AimMethod == "Mobile" then
                         local newCFrame = CFrame.new(Camera.CFrame.Position, aimPosition)
-                        Camera.CFrame = Config.Smoothness >= 1 and newCFrame or Camera.CFrame:Lerp(newCFrame, Config.Smoothness)
+                        Camera.CFrame = Camera.CFrame:Lerp(newCFrame, Config.Smoothness)
                     elseif Config.AimMethod == "PC" and mousemoverel then
                         mousemoverel(((pos.X - (Camera.ViewportSize.X/2)) / 2) * Config.Smoothness, ((pos.Y - (Camera.ViewportSize.Y/2)) / 2) * Config.Smoothness)
                     end
@@ -577,21 +633,26 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- LÓGICA DO NO-CLIP E GOD MODE OTIMIZADA PARA MOBILE
+-- LÓGICA DO NO-CLIP E GOD MODE PROTEGIDA
 RunService.Stepped:Connect(function()
-    if LP.Character then
-        if Config.GodMode and LP.Character:FindFirstChild("Humanoid") then 
-            LP.Character.Humanoid.Health = LP.Character.Humanoid.MaxHealth 
-        end
-        if Config.NoClip then
-            for _, part in ipairs(LP.Character:GetDescendants()) do 
-                if part:IsA("BasePart") and part.CanCollide then 
-                    part.CanCollide = false 
-                end 
+    pcall(function()
+        if LP.Character then
+            if Config.GodMode then 
+                local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 and hum.Health < hum.MaxHealth then
+                    hum.Health = hum.MaxHealth 
+                end
+            end
+            if Config.NoClip then
+                for _, part in ipairs(LP.Character:GetDescendants()) do 
+                    if part:IsA("BasePart") and part.CanCollide then 
+                        part.CanCollide = false 
+                    end 
+                end
             end
         end
-    end
+    end)
 end)
 
 UpdateMenuColor(Config.MenuColor)
-Notify("SIXCROW", "BloxStrike Pro Carregado! UI Clean + RGB Ativo.")
+Notify("SIXCROW", "BloxStrike Pro Carregado! API Nativa + Otimização Mobile.")
